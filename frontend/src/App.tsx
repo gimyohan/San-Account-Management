@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
 import CategoryPage from './pages/CategoryPage';
 import CodeManagePage from './pages/CodeManagePage';
+import PayerManagePage from './pages/PayerManagePage';
 import LoginPage from './pages/LoginPage';
 import { authService } from './api/authService';
 
@@ -33,6 +34,7 @@ function App() {
     switch (activePage) {
       case 'categories': return <CategoryPage />;
       case 'codes': return <CodeManagePage />;
+      case 'payers': return <PayerManagePage />;
       default: return (
         <div className="flex items-center justify-center h-full">
           <p className="text-slate-400 dark:text-slate-500 text-lg">준비 중인 페이지입니다.</p>
