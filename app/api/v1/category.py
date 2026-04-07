@@ -15,19 +15,19 @@ router = APIRouter(prefix="/categories", tags=["categories"])
 def get_category_service(db=Depends(get_db)) -> CategoryService:
     return CategoryService(db)
 
-@router.get("/", response_model = SuccessResponse[list[CategoryTreeRead]])
+@router.get("/", status_code=status.HTTP_200_OK, response_model = SuccessResponse[list[CategoryTreeRead]])
 async def get_category_tree(service: CategoryService = Depends(get_category_service), role: str = Depends(auth.get_current_user)) -> SuccessResponse[list[CategoryTreeRead]]:
     if role not in ["admin", "general"]:
         raise ForbiddenException()
     return SuccessResponse(data=service.get_category_tree())
 
-@router.get("/{id}", response_model=SuccessResponse[CategoryRead])
+@router.get("/{id}", status_code=status.HTTP_200_OK, response_model=SuccessResponse[CategoryRead])
 async def get_category(id: int, service: CategoryService = Depends(get_category_service), role: str = Depends(auth.get_current_user)) -> SuccessResponse[CategoryRead]:
     if role not in ["admin", "general"]:
         raise ForbiddenException()
     return SuccessResponse(data=service.get_category(id))
 
-@router.post("/", response_model=SuccessResponse[CategoryRead])
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=SuccessResponse[CategoryRead])
 async def create_category(category: CategoryCreate, service: CategoryService = Depends(get_category_service), role: str = Depends(auth.get_current_user)) -> SuccessResponse[CategoryRead]:
     if role != "admin":
         raise ForbiddenException()
@@ -36,7 +36,7 @@ async def create_category(category: CategoryCreate, service: CategoryService = D
         message="분류가 성공적으로 추가되었습니다."
     )
 
-@router.patch("/{id}")
+@router.patch("/{id}", status_code=status.HTTP_200_OK, response_model=SuccessResponse[CategoryRead])
 async def update_category(id: int, category: CategoryCreate, service: CategoryService = Depends(get_category_service), role: str = Depends(auth.get_current_user)):
     if role != "admin":
         raise ForbiddenException()
@@ -45,9 +45,8 @@ async def update_category(id: int, category: CategoryCreate, service: CategorySe
         message="분류가 성공적으로 수정되었습니다."
     )
 
-@router.delete("/{id}")
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_category(id: int, service: CategoryService = Depends(get_category_service), role: str = Depends(auth.get_current_user)):
     if role != "admin":
         raise ForbiddenException()
     service.delete_category(id)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)

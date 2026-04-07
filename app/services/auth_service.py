@@ -1,9 +1,10 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+from fastapi import HTTPException
 
 from app.db.schema import Code
 from app.models.auth import CodeRead
-from app.core.exception import NotFoundException, ConflictException
+from app.core.exception import NotFoundException, ConflictException, ForbiddenException
 from app.core.config import config
 
 from datetime import datetime, timedelta
@@ -18,7 +19,7 @@ class AuthService:
     def create_access_token(self, type: str, code: str) -> str:
         user = self.db.scalar(select(Code).where(Code.type == type, Code.code == code))
         if not user:
-            raise NotFoundException("유효하지 않은 코드입니다. 다시 확인해주세요.", "INVALID_CODE")
+            raise ForbiddenException("유효하지 않은 코드입니다. 다시 확인해주세요.", "INVALID_CODE")
         user.last_accessed_at = datetime.utcnow()
         self.db.commit()
         self.db.refresh(user)
@@ -45,7 +46,7 @@ class AuthService:
     def delete_code(self, id):
         code = self.db.scalar(select(Code).where(Code.id == id))
         if not code:
-            raise NotFoundException("유효하지 않은 코드입니다. 다시 확인해주세요.", "INVALID_CODE")
+            raise ForbiddenException("유효하지 않은 코드입니다. 다시 확인해주세요.", "INVALID_CODE")
         if code.type == "admin":
             raise ConflictException("관리자 코드는 삭제할 수 없습니다.", "CANNOT_DELETE_ADMIN")
         self.db.delete(code)
@@ -55,7 +56,7 @@ class AuthService:
     def update_code_memo(self, id: int, memo: str | None) -> CodeRead:
         code = self.db.scalar(select(Code).where(Code.id == id))
         if not code:
-            raise NotFoundException("유효하지 않은 코드입니다. 다시 확인해주세요.", "INVALID_CODE")
+            raise ForbiddenException("유효하지 않은 코드입니다. 다시 확인해주세요.", "INVALID_CODE")
         if code.type == "admin":
             raise ConflictException("관리자 코드는 수정할 수 없습니다.", "CANNOT_UPDATE_ADMIN")
         
