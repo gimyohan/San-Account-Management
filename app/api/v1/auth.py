@@ -1,4 +1,3 @@
-from app.exception.auth import ForbiddenException
 from fastapi import APIRouter, Depends, Response
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -7,6 +6,7 @@ from app.models.response import SuccessResponse, ErrorResponse
 from app.models.auth import Role, CodeRead, CodeUpdate
 from app.services.auth_service import AuthService
 from app.core.config import config
+from app.core.exception import ForbiddenException
 from app.core import auth
 
 router = APIRouter(prefix="/auth", tags=["auth"])

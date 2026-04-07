@@ -5,7 +5,7 @@ from app.api.v1 import user, category, auth, payer
 from app.core.config import config
 from app.core.log import setup_logging
 from app.db.schema import Base, engine
-from app.exception.handlers import register_handlers
+from app.core.handler import register_handlers
 
 setup_logging()
 Base.metadata.create_all(bind=engine)

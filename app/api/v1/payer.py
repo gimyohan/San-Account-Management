@@ -6,7 +6,7 @@ from app.services.payer_service import PayerService
 from app.db.schema import get_db
 from app.models.response import SuccessResponse
 from app.models.payer import PayerRead, PayerCrate
-from app.exception.auth import ForbiddenException
+from app.core.exception import ForbiddenException
 
 router = APIRouter(prefix="/payers", tags=["payers"])
 

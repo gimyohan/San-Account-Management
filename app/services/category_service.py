@@ -3,7 +3,7 @@ from sqlalchemy import select
 
 from app.db.schema import Category
 from app.models.category import CategoryRead, CategoryTreeRead
-from app.exception.category import NotFoundException, ConflictException, CycleException, LevelException
+from app.core.exception import NotFoundException, ConflictException
 
 
 class CategoryService:
@@ -35,13 +35,13 @@ class CategoryService:
         stmt = select(Category).where(Category.id == id)
         category = self.db.scalar(stmt)
         if category is None:
-            raise NotFoundException()
+            raise NotFoundException("분류명을 찾을 수 없습니다.")
         return self._to_category_read(category)
     
     def create_category(self, name: str, parent_id: int | None) -> CategoryRead:
         stmt = select(Category).where(Category.name == name)
         if self.db.scalar(stmt) is not None:
-            raise ConflictException()
+            raise ConflictException("이미 존재하는 분류명입니다.")
         
         if parent_id is None:
             category = Category(name=name, level=1)
@@ -49,10 +49,10 @@ class CategoryService:
             stmt = select(Category).where(Category.id == parent_id)
             parent_category = self.db.scalar(stmt)
             if parent_category is None:
-                raise NotFoundException()
+                raise NotFoundException("부모 분류명을 찾을 수 없습니다.")
             category = Category(name=name, parent_id=parent_id, level=parent_category.level + 1)
             if category.level > 3:
-                raise LevelException()
+                raise ConflictException("분류명의 깊이가 너무 깊습니다.")
 
         self.db.add(category)
         self.db.commit()
@@ -84,7 +84,7 @@ class CategoryService:
         stmt = select(Category).where(Category.id == id)
         category = self.db.scalar(stmt)
         if category is None:
-            raise NotFoundException()
+            raise NotFoundException("분류명을 찾을 수 없습니다.")
         
         if self.db.scalar(select(Category).where(Category.name == name, Category.id != id)) is not None:
             raise ConflictException("이미 존재하는 분류명입니다.")
@@ -95,15 +95,15 @@ class CategoryService:
             stmt = select(Category).where(Category.id == parent_id)
             parent_category = self.db.scalar(stmt)
             if parent_category is None:
-                raise NotFoundException()
+                raise NotFoundException("부모 분류명을 찾을 수 없습니다.")
             if parent_category.level + 1 > 3:
-                raise LevelException()
+                raise ConflictException("분류명의 깊이가 너무 깊습니다.")
             sub_categories = self._get_sub_categories(id)
             for sub_category in sub_categories:
                 if sub_category.id == parent_id:
-                    raise CycleException()
+                    raise ConflictException("순환 분류가 감지되었습니다.")
                 if sub_category.level - category.level + parent_category.level + 1 > 3:
-                    raise LevelException()
+                    raise ConflictException("분류명의 깊이가 너무 깊습니다.")
             category.level = parent_category.level + 1
             
         category.name = name
@@ -117,7 +117,7 @@ class CategoryService:
         stmt = select(Category).where(Category.id == id)
         category = self.db.scalar(stmt)
         if category is None:
-            raise NotFoundException()
+            raise NotFoundException("분류명을 찾을 수 없습니다.")
         if category.children != []:
             raise ConflictException("하위 분류가 존재하여 삭제할 수 없습니다. 먼저 하위 분류를 삭제해주세요.")
         self.db.delete(category)

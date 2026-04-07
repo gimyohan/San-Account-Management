@@ -4,7 +4,7 @@ from app.db.schema import get_db
 from app.models.response import SuccessResponse, ErrorResponse
 from app.models.category import CategoryCreate, CategoryTreeRead, CategoryRead
 from app.services.category_service import CategoryService
-from app.exception.auth import ForbiddenException
+from app.core.exception import ForbiddenException
 from app.core import auth
 
 from starlette import status

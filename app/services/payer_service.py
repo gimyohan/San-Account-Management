@@ -3,7 +3,7 @@ from sqlalchemy import select
 
 from app.db.schema import Payer
 from app.models.payer import PayerRead
-from app.exception.payer import NotFoundException, HasReceiptException
+from app.core.exception import NotFoundException, ConflictException
 
 
 class PayerService:
@@ -38,6 +38,6 @@ class PayerService:
         if not payer:
             raise NotFoundException("결제인을 찾을 수 없습니다.")
         if payer.receipts != []:
-            raise HasReceiptException("연결된 영수증 내역이 존재하여 삭제할 수 없습니다.")
+            raise ConflictException("연결된 영수증 내역이 존재하여 삭제할 수 없습니다.", "HAS_RECEIPTS")
         self.db.delete(payer)
         self.db.commit()
