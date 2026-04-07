@@ -263,6 +263,53 @@
   }
   ```
 
+### ➕ 4.2 결제인 추가 (Admin)
+- **Endpoint**: `POST /api/payers`
+- **Request Body**:
+  ```json
+  {
+    "name": "홍길동",
+    "account": "신한은행 110-123-456789"
+  }
+  ```
+- **Response (201 Created)**:
+  ```json
+  {
+    "data": { "id": 2, "name": "홍길동", "account": "신한은행 110-123-456789" },
+    "message": "결제인이 성공적으로 추가되었습니다."
+  }
+  ```
+
+### 📝 4.3 결제인 수정 (Admin)
+- **Endpoint**: `PATCH /api/payers/:id`
+- **Request Body**:
+  ```json
+  {
+    "name": "홍길동(수정)",
+    "account": "국민은행 123456-78-901234"
+  }
+  ```
+- **Response (200 OK)**:
+  ```json
+  {
+    "data": { "id": 2, "name": "홍길동(수정)", "account": "국민은행 123456-78-901234" },
+    "message": "결제인 정보가 성공적으로 수정되었습니다."
+  }
+  ```
+
+### ❌ 4.4 결제인 삭제 (Admin)
+- **Endpoint**: `DELETE /api/payers/:id`
+- **Description**: 지정된 결제인 정보를 삭제합니다.
+- **제약**: 해당 결제인과 연결된 영수증이 존재하면 삭제 불가 (`409 Conflict`)
+- **Response (204 No Content)**: 본문 없음
+- **실패 시 응답**:
+  ```json
+  {
+    "error": "HAS_RECEIPTS",
+    "detail": "연결된 영수증 내역이 존재하여 삭제할 수 없습니다."
+  }
+  ```
+
 ---
 
 ## 📈 5. 통계 분석 (Analytics API)

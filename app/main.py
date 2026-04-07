@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import user, category, auth
+from app.api.v1 import user, category, auth, payer
 from app.core.config import config
 from app.core.log import setup_logging
 from app.db.schema import Base, engine
@@ -30,3 +30,4 @@ app.add_middleware(
 app.include_router(user.router, prefix="/api", tags=["user"])
 app.include_router(category.router, prefix="/api", tags=["categories"])
 app.include_router(auth.router, prefix="/api", tags=["auth"])
+app.include_router(payer.router, prefix="/api", tags=["payers"])

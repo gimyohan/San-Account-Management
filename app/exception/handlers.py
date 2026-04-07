@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from app.exception import category, auth
+from app.exception import category, auth, payer
 
 def register_handlers(app: FastAPI):
     #category
@@ -37,3 +37,12 @@ def register_handlers(app: FastAPI):
     @app.exception_handler(auth.AdminCodeException)
     async def admin_code_handler(request: Request, exc: auth.AdminCodeException):
         return JSONResponse(status_code=409, content={"error": "CANNOT_DELETE_ADMIN", "detail": str(exc.message)})
+
+    # payer
+    @app.exception_handler(payer.NotFoundException)
+    async def not_found_handler(request: Request, exc: payer.NotFoundException):
+        return JSONResponse(status_code=404, content={"error": "NOT_FOUND", "detail": str(exc.message)})
+    
+    @app.exception_handler(payer.HasReceiptException)
+    async def has_receipt_handler(request: Request, exc: payer.HasReceiptException):
+        return JSONResponse(status_code=409, content={"error": "HAS_RECEIPT", "detail": str(exc.message)})
