@@ -46,6 +46,7 @@ class ReceiptService:
             stmt = stmt.where(Receipt.payer_id == payer_id)
         if is_transferred is not None:
             stmt = stmt.where(Receipt.is_transferred == is_transferred)
+        stmt = stmt.order_by(Receipt.transaction_at.desc())
         receipts = self.db.scalars(stmt).all()
         return receipts
 
