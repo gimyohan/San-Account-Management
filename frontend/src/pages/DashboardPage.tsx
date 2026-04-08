@@ -9,7 +9,7 @@ import { ReceiptForm } from '../components/receipt/ReceiptForm';
 
 import { 
   Wallet, TrendingUp, TrendingDown, Tag, 
-  Receipt, Plus, Clock, Hash, ChevronRight, X, Trash2
+  Receipt, Plus, Clock, ChevronRight, X, Trash2
 } from 'lucide-react';
 
 import type { ReceiptRead, ReceiptCreate } from '../types/receipt';
@@ -17,21 +17,34 @@ import type { BalanceResponse } from '../types/stats';
 
 export default function DashboardPage() {
   const queryClient = useQueryClient();
-  const [dateFilter, setDateFilter] = useState<'all' | 'this_month'>('all');
-  
-  // Date params
-  const dateParams = useMemo(() => {
-    if (dateFilter === 'all') return {};
+  const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    return { start_date: firstDay.toISOString() };
-  }, [dateFilter]);
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  const monthDateParams = useMemo(() => {
+    if (!selectedMonth) return {};
+    const [year, month] = selectedMonth.split('-');
+    const firstDay = new Date(Number(year), Number(month) - 1, 1);
+    const lastDay = new Date(Number(year), Number(month), 0, 23, 59, 59);
+    return { 
+      start_date: firstDay.toISOString(),
+      end_date: lastDay.toISOString()
+    };
+  }, [selectedMonth]);
 
   // Fetch Stats (Balance)
-  const { data: balance } = useQuery({
-    queryKey: ['stats', 'balance', dateFilter],
-    queryFn: () => statsService.getBalance(dateParams)
+  const { data: allBalanceRes } = useQuery({
+    queryKey: ['stats', 'balance', 'all'],
+    queryFn: () => statsService.getBalance()
   });
+  const allBalance = allBalanceRes;
+
+  const { data: monthBalanceRes } = useQuery({
+    queryKey: ['stats', 'balance', selectedMonth],
+    queryFn: () => statsService.getBalance(monthDateParams)
+  });
+  const monthBalance = monthBalanceRes;
 
   // Fetch Unsettled Receipts
   const { data: unsettledRes } = useQuery({
@@ -48,7 +61,6 @@ export default function DashboardPage() {
   const codes = codesRes?.data || [];
 
   // Derived Code Stats
-  const topAccessedCodes = [...codes].sort((a, b) => b.access_count - a.access_count).slice(0, 5);
   const recentAccessedCodes = [...codes]
     .filter(c => c.last_accessed_at)
     .sort((a, b) => new Date(b.last_accessed_at!).getTime() - new Date(a.last_accessed_at!).getTime())
@@ -117,14 +129,6 @@ export default function DashboardPage() {
           <p className="text-slate-500 dark:text-slate-400 font-medium">관리자님, 현재 재무 상태와 접속 통계를 확인하세요.</p>
         </div>
         <div className="flex items-center gap-3">
-          <select 
-            value={dateFilter} 
-            onChange={e => setDateFilter(e.target.value as any)}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="all">전체 기간</option>
-            <option value="this_month">이번 달</option>
-          </select>
           <button 
             onClick={() => setShowQuickAdd(!showQuickAdd)}
             className="flex items-center justify-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20"
@@ -148,22 +152,44 @@ export default function DashboardPage() {
       )}
 
       {/* Widget 1: Balance Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-blue-500 to-primary p-6 rounded-2xl text-white shadow-lg shadow-blue-500/20">
-          <div className="flex items-center gap-2 text-blue-100 font-medium mb-2"><Wallet size={18} /> 총 잔액</div>
-          <div className="text-3xl font-bold font-mono">{(balance?.total_balance || 0).toLocaleString()}원</div>
+      <div className="space-y-4">
+        {/* All time */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-gradient-to-br from-blue-500 to-primary p-6 rounded-2xl text-white shadow-lg shadow-blue-500/20">
+            <div className="flex items-center gap-2 text-blue-100 font-medium mb-2"><Wallet size={18} /> 전체 누적 잔액</div>
+            <div className="text-3xl font-bold font-mono">{(allBalance?.total_balance || 0).toLocaleString()}원</div>
+          </div>
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-medium mb-2"><TrendingUp size={18} className="text-green-500" /> 전체 수입액</div>
+            <div className="text-2xl font-bold text-slate-800 dark:text-white font-mono">{(allBalance?.total_income || 0).toLocaleString()}원</div>
+          </div>
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-medium mb-2"><TrendingDown size={18} className="text-rose-500" /> 전체 지출액</div>
+            <div className="text-2xl font-bold text-slate-800 dark:text-white font-mono">{(allBalance?.total_expense || 0).toLocaleString()}원</div>
+          </div>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-medium mb-2"><TrendingUp size={18} className="text-green-500" /> 수입액</div>
-          <div className="text-2xl font-bold text-slate-800 dark:text-white font-mono">{(balance?.total_income || 0).toLocaleString()}원</div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-medium mb-2"><TrendingDown size={18} className="text-rose-500" /> 지출액</div>
-          <div className="text-2xl font-bold text-slate-800 dark:text-white font-mono">{(balance?.total_expense || 0).toLocaleString()}원</div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-medium mb-2"><Tag size={18} className="text-amber-500" /> 할인액</div>
-          <div className="text-2xl font-bold text-slate-800 dark:text-white font-mono">{(balance?.total_discount || 0).toLocaleString()}원</div>
+
+        {/* Monthly */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-center items-start">
+            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-medium mb-3">
+              <Clock size={16} /> 월별 조회
+            </div>
+            <input 
+              type="month" 
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 font-bold text-lg text-slate-800 dark:text-white outline-none w-full"
+            />
+          </div>
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-medium mb-2"><TrendingUp size={18} className="text-green-500" /> 월간 수입액</div>
+            <div className="text-2xl font-bold text-slate-800 dark:text-white font-mono">{(monthBalance?.total_income || 0).toLocaleString()}원</div>
+          </div>
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-medium mb-2"><TrendingDown size={18} className="text-rose-500" /> 월간 지출액</div>
+            <div className="text-2xl font-bold text-slate-800 dark:text-white font-mono">{(monthBalance?.total_expense || 0).toLocaleString()}원</div>
+          </div>
         </div>
       </div>
 
@@ -220,26 +246,7 @@ export default function DashboardPage() {
               ))}
             </ul>
           </div>
-
-          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
-            <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-4">
-              <Hash className="text-purple-500" size={18} /> 최다 접속 랭킹
-            </h3>
-            <ul className="space-y-3">
-               {topAccessedCodes.length === 0 ? <li className="text-sm text-slate-400">데이터가 없습니다.</li> : 
-               topAccessedCodes.map((c, i) => (
-                <li key={c.id} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${i===0?'bg-amber-400':i===1?'bg-slate-300':i===2?'bg-amber-600':'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
-                      {i+1}
-                    </span>
-                    <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">{c.code}</span>
-                  </div>
-                  <span className="text-slate-500 font-bold bg-slate-50 dark:bg-slate-800 px-2 rounded-md">{c.access_count}회</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* Widget intentionally empty below or can be removed if unused */}
         </div>
       </div>
 
