@@ -1,4 +1,4 @@
-import { LayoutDashboard, ReceiptText, Tags, Users, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Tags, Users, Settings, LogOut, Landmark } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -9,6 +9,7 @@ function cn(...inputs: ClassValue[]) {
 const menuItems = [
   { icon: LayoutDashboard, label: '대시보드', page: 'dashboard' },
   { icon: ReceiptText, label: '영수증 관리', page: 'receipts' },
+  { icon: Landmark, label: '예산 관리', page: 'budget' },
   { icon: Tags, label: '분류 관리', page: 'categories' },
   { icon: Users, label: '결제인 관리', page: 'payers' },
   { icon: Settings, label: '코드 관리', page: 'codes' },

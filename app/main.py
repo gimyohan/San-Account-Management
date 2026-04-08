@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import category, auth, payer, receipt, stats
+from app.api.v1 import category, auth, payer, receipt, stats, fiscal_term, budget
 from app.core.config import config
 from app.core.log import setup_logging
 from app.db.schema import Base, engine
@@ -32,3 +32,5 @@ app.include_router(auth.router, prefix="/api", tags=["auth"])
 app.include_router(payer.router, prefix="/api", tags=["payers"])
 app.include_router(receipt.router, prefix="/api", tags=["receipts"])
 app.include_router(stats.router, prefix="/api", tags=["stats"])
+app.include_router(fiscal_term.router, prefix="/api", tags=["fiscal-terms"])
+app.include_router(budget.router, prefix="/api", tags=["budgets"])

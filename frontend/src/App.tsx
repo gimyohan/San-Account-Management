@@ -5,6 +5,7 @@ import CodeManagePage from './pages/CodeManagePage';
 import PayerManagePage from './pages/PayerManagePage';
 import ReceiptManagePage from './pages/ReceiptManagePage';
 import DashboardPage from './pages/DashboardPage';
+import BudgetManagePage from './pages/BudgetManagePage';
 import LoginPage from './pages/LoginPage';
 import { authService } from './api/authService';
 
@@ -39,6 +40,7 @@ function App() {
       case 'codes': return <CodeManagePage />;
       case 'payers': return <PayerManagePage />;
       case 'receipts': return <ReceiptManagePage />;
+      case 'budget': return <BudgetManagePage />;
       default: return (
         <div className="flex items-center justify-center h-full">
           <p className="text-slate-400 dark:text-slate-500 text-lg">준비 중인 페이지입니다.</p>
