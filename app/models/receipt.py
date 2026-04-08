@@ -4,7 +4,7 @@ from pydantic import BaseModel, field_validator, model_validator
 class ReceiptRead(BaseModel):
     id: int
     category_id: int | None
-    payer_id: int
+    payer_id: int | None
     description: str
     income: int = 0
     expense: int = 0

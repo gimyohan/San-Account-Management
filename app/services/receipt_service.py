@@ -59,7 +59,7 @@ class ReceiptService:
     def create_receipt(self, receiptDTO: ReceiptCreate) -> ReceiptRead:
         if receiptDTO.category_id is not None and self.db.scalar(select(Category).where(Category.id == receiptDTO.category_id)) is None:
             raise NotFoundException("카테고리를 찾을 수 없습니다.")
-        if self.db.scalar(select(Payer).where(Payer.id == receiptDTO.payer_id)) is None:
+        if receiptDTO.payer_id is not None and self.db.scalar(select(Payer).where(Payer.id == receiptDTO.payer_id)) is None:
             raise NotFoundException("결제인을 찾을 수 없습니다.")
 
         receipt = Receipt(
