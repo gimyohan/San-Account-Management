@@ -1,3 +1,6 @@
+from fastapi import HTTPException
+from starlette import status
+
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
@@ -58,7 +61,7 @@ class ReceiptService:
             raise NotFoundException("카테고리를 찾을 수 없습니다.")
         if self.db.scalar(select(Payer).where(Payer.id == receiptDTO.payer_id)) is None:
             raise NotFoundException("결제인을 찾을 수 없습니다.")
-        
+
         receipt = Receipt(
             category_id=receiptDTO.category_id,
             payer_id=receiptDTO.payer_id,

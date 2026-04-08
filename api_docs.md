@@ -187,6 +187,18 @@
 
 ## 🧾 2. 영수증 관리 (Receipts API)
 
+### 🚨 영수증 데이터 유효성 및 제약 조건 (Validation)
+새로운 영수증을 등록하거나 영수증 데이터를 수정할 때 다음 제약 조건이 백엔드에서 검증됩니다.
+- **상호 배타적 금액**: `income`과 `expense`는 동시에 0일 수 없으며, 둘 중 한쪽에만 값을 가질 수 있습니다. (수입/지출을 명확히 분리)
+- **할인액 제한**: 지출액은 항상 할인액보다 크거나 같아야 합니다. (`expense >= discount`)
+- **결제인(payerId)**: 지출(`expense > 0`)일 경우 `payerId`는 필수이며, 수입(`income > 0`)일 경우 `null`을 허용/권장합니다.
+- **수입(Income) 데이터의 기본값 규칙 (FE 처리 권장)**: 수입 영수증 데이터 생성 시 다음 값을 기본으로 전송하는 것이 권장됩니다.
+  - `payerId` = `null`
+  - `discount` = 0
+  - `peopleCount` = 1
+  - `isTransferred` = `true`
+  - `transferredAt` = `현재 시간(now)`
+
 ### 📋 2.1 목록 조회
 - **Endpoint**: `GET /api/receipts`
 - **Query Params**:

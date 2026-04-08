@@ -22,7 +22,7 @@ class Receipt(Base):
     __tablename__ = "receipts"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
-    payer_id: Mapped[int] = mapped_column(ForeignKey("payers.id"), nullable=False)
+    payer_id: Mapped[int] = mapped_column(ForeignKey("payers.id"), nullable=True)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
     income: Mapped[int] = mapped_column(nullable=False, default=0)
     expense: Mapped[int] = mapped_column(nullable=False, default=0)
