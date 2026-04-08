@@ -174,8 +174,12 @@ export default function ReceiptManagePage() {
                     </div>
                     <div className="flex items-center text-xs text-slate-500 dark:text-slate-400 gap-3 flex-wrap">
                       <span className="flex items-center gap-1"><Calendar size={14} /> {formatDateLabel(item.transaction_at)}</span>
-                      <span className="flex items-center gap-1"><User size={14} /> {payerMap.get(item.payer_id)?.name || '알수없음'}</span>
-                      <span className="flex items-center gap-1"><Tag size={14} /> {categoryMap.get(item.category_id || -1)?.name || '미분류'}</span>
+                      {item.income === 0 && (
+                        <>
+                          <span className="flex items-center gap-1"><User size={14} /> {payerMap.get(item.payer_id || -1)?.name || '알수없음'}</span>
+                          <span className="flex items-center gap-1"><Tag size={14} /> {categoryMap.get(item.category_id || -1)?.name || '미분류'}</span>
+                        </>
+                      )}
                       {item.people_count > 1 && <span className="font-semibold text-blue-500">({item.people_count}인 분할)</span>}
                       {item.receipt_url && <a href={item.receipt_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-primary hover:underline"><Link2 size={14} /> 링크</a>}
                     </div>
