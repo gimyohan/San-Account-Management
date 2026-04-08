@@ -422,3 +422,52 @@
     }
   }
   ```
+
+---
+
+## 📅 6. 예산 관리 (Budgets & Fiscal Terms API)
+
+### 🗓️ 6.1 회계 기준(Fiscal Term) 관리
+**6.1.1 회계 기준 목록 조회**
+- **Endpoint**: `GET /api/fiscal-terms`
+- **Response**: 
+  ```json
+  {
+    "data": [
+      { "id": 1, "name": "2024 상반기", "startDate": "2024-01-01T00:00:00Z", "endDate": "2024-06-30T23:59:59Z" }
+    ]
+  }
+  ```
+
+**6.1.2 회계 기준 등록/수정/삭제 (Admin)**
+- **Create**: `POST /api/fiscal-terms` (Request: `name`, `startDate`, `endDate`)
+- **Update**: `PATCH /api/fiscal-terms/:id`
+- **Delete**: `DELETE /api/fiscal-terms/:id`
+
+### 💰 6.2 예산안(Budget) 관리
+**6.2.1 특정 회계 기준의 예산안 조회**
+- **Endpoint**: `GET /api/budgets`
+- **Query Params**: `fiscalTermId` (어떤 회계연도인지 필터링)
+- **Response**:
+  ```json
+  {
+    "data": [
+      { "id": 1, "fiscalTermId": 1, "categoryId": 2, "amount": 500000 }
+    ]
+  }
+  ```
+
+**6.2.2 예산안 일괄 저장 및 수정 (Admin)**
+예산은 카테고리별로 일괄해서 배정하고 수정하는 패턴이 많으므로 단일 항목(단건) 조작보다는 Bulk API로 구성하는 것을 권장합니다.
+- **Endpoint**: `PUT /api/budgets/bulk`
+- **Request Body**:
+  ```json
+  {
+    "fiscalTermId": 1,
+    "budgets": [
+      { "categoryId": 2, "amount": 500000 },
+      { "categoryId": 3, "amount": 300000 }
+    ]
+  }
+  ```
+- **Response (200 OK)**: "예산안이 성공적으로 저장되었습니다."
