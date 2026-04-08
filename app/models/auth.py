@@ -8,6 +8,7 @@ class CodeRead(BaseModel):
     id: int
     code: str
     memo: str | None = None
+    access_count: int
     last_accessed_at: datetime | None = None
 
 class CodeUpdate(BaseModel):

@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from fastapi import HTTPException
+from starlette import status
 
 from app.db.schema import Code
 from app.models.auth import CodeRead
@@ -29,19 +30,29 @@ class AuthService:
             "iat": datetime.utcnow(),
             "exp": datetime.utcnow() + timedelta(minutes = config.jwt_access_token_expire_minutes)
         }
+        user.access_count += 1
+        self.db.commit()
+        self.db.refresh(user)
         access_token = jwt.encode(to_encode, config.jwt_secret_key, algorithm=config.jwt_algorithm)
         return access_token
         
-    def get_codes(self) -> list[CodeRead]:
-        codes = self.db.scalars(select(Code).where(Code.type == "general")).all()
-        return [CodeRead(id=code.id, code=code.code, memo=code.memo, last_accessed_at=code.last_accessed_at) for code in codes]
+    def get_codes(self, limit: int) -> list[CodeRead]:
+        if limit < 0:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="limit은 0 이상의 길이어야 합니다.")
+        codes = self.db.scalars(
+            select(Code)
+            .where(Code.type == "general")
+            .order_by(Code.last_accessed_at.desc().nulls_last())
+            .limit(limit)
+        ).all()
+        return [CodeRead(id=code.id, code=code.code, memo=code.memo, access_count=code.access_count, last_accessed_at=code.last_accessed_at) for code in codes]
 
     def create_code(self) -> CodeRead:
         code = Code(type="general", code="".join(choice(self.code_domain) for _ in range(6)))
         self.db.add(code)
         self.db.commit()
         self.db.refresh(code)
-        return CodeRead(id=code.id, code=code.code, memo=code.memo, last_accessed_at=code.last_accessed_at)
+        return CodeRead(id=code.id, code=code.code, memo=code.memo, access_count=code.access_count, last_accessed_at=code.last_accessed_at)
 
     def delete_code(self, id):
         code = self.db.scalar(select(Code).where(Code.id == id))
@@ -63,4 +74,4 @@ class AuthService:
         code.memo = memo
         self.db.commit()
         self.db.refresh(code)
-        return CodeRead(id=code.id, code=code.code, memo=code.memo, last_accessed_at=code.last_accessed_at)
+        return CodeRead(id=code.id, code=code.code, memo=code.memo, access_count=code.access_count, last_accessed_at=code.last_accessed_at)

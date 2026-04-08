@@ -3,13 +3,15 @@ import { Sidebar } from './components/layout/Sidebar';
 import CategoryPage from './pages/CategoryPage';
 import CodeManagePage from './pages/CodeManagePage';
 import PayerManagePage from './pages/PayerManagePage';
+import ReceiptManagePage from './pages/ReceiptManagePage';
+import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import { authService } from './api/authService';
 
 function App() {
   const [role, setRole] = useState<string | null>(null);
   const [checking, setChecking] = useState(true);
-  const [activePage, setActivePage] = useState('categories');
+  const [activePage, setActivePage] = useState('dashboard');
 
   useEffect(() => {
     authService.me()
@@ -32,9 +34,11 @@ function App() {
 
   const renderPage = () => {
     switch (activePage) {
+      case 'dashboard': return <DashboardPage />;
       case 'categories': return <CategoryPage />;
       case 'codes': return <CodeManagePage />;
       case 'payers': return <PayerManagePage />;
+      case 'receipts': return <ReceiptManagePage />;
       default: return (
         <div className="flex items-center justify-center h-full">
           <p className="text-slate-400 dark:text-slate-500 text-lg">준비 중인 페이지입니다.</p>

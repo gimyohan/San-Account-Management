@@ -48,10 +48,10 @@ async def get_current_user(role: str = Depends(auth.get_current_user)) -> Succes
 
 
 @router.get("/codes", status_code=status.HTTP_200_OK, response_model=SuccessResponse[list[CodeRead]])
-async def get_codes(service: AuthService = Depends(get_auth_service), role: str = Depends(auth.get_current_user)) -> SuccessResponse[list[CodeRead]]:
+async def get_codes(limit: int = 5, service: AuthService = Depends(get_auth_service), role: str = Depends(auth.get_current_user)) -> SuccessResponse[list[CodeRead]]:
     if role != "admin":
         raise ForbiddenException()
-    return SuccessResponse(data=service.get_codes())
+    return SuccessResponse(data=service.get_codes(limit))
 
 @router.post("/codes", status_code=status.HTTP_201_CREATED, response_model=SuccessResponse[CodeRead])
 async def create_code(service: AuthService = Depends(get_auth_service), role: str = Depends(auth.get_current_user)) -> SuccessResponse[CodeRead]:

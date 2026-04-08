@@ -139,12 +139,14 @@
 #### 📋 1.5.1 일반 코드 목록 조회
 - **Endpoint**: `GET /api/auth/codes`
 - **Description**: 발급된 모든 일반(general) 코드를 조회합니다. Admin 코드는 목록에 포함되지 않습니다.
+- **Query Params**:
+  - `limit` (정수): 반환할 최대 결과 수 (가장 최근에 사용된 순, 즉 last_accessed_at 내림차순 정렬을 기본으로 동작)
 - **Response (200 OK)**:
   ```json
   {
     "data": [
-      { "id": 2, "code": "SAM-ABCD-1234", "memo": "분기별 결산용", "last_accessed_at": "2024-04-06T15:30:00Z" },
-      { "id": 3, "code": "SAM-EFGH-5678", "memo": null, "last_accessed_at": null }
+      { "id": 2, "code": "SAM-ABCD-1234", "memo": "분기별 결산용", "access_count": 5, "last_accessed_at": "2024-04-06T15:30:00Z" },
+      { "id": 3, "code": "SAM-EFGH-5678", "memo": null, "access_count": 0, "last_accessed_at": null }
     ]
   }
   ```
@@ -187,10 +189,56 @@
 
 ### 📋 2.1 목록 조회
 - **Endpoint**: `GET /api/receipts`
-- **Query Params**: `startDate`, `endDate`, `categoryId`, `payerId`
-- **Response**: `{ "data": [...] }`
+- **Query Params**:
+  - `startDate`, `endDate` (YYYY-MM-DD 형식)
+  - `categoryId` (특정 카테고리 필터링)
+  - `payerId` (특정 결제인 필터링)
+  - `isTransferred` (boolean, 미정산 처리된 내역 필터링 기능)
+- **Response**:
+  ```json
+  {
+    "data": [
+      {
+        "id": 1,
+        "categoryId": 1,
+        "payerId": 2,
+        "description": "점심 식대",
+        "income": 0,
+        "expense": 45000,
+        "discount": 0,
+        "peopleCount": 4,
+        "receiptUrl": "https://...",
+        "isTransferred": true,
+        "transactionAt": "2024-04-06T12:30:00Z",
+        "transferredAt": "2024-04-06T18:00:00Z"
+      }
+    ]
+  }
+  ```
 
-### ➕ 2.2 영수증 등록 (Admin)
+### 🔍 2.2 상세 조회
+- **Endpoint**: `GET /api/receipts/:id`
+- **Response (200 OK)**:
+  ```json
+  {
+    "data": {
+      "id": 1,
+      "categoryId": 1,
+      "payerId": 2,
+      "description": "점심 식대",
+      "income": 0,
+      "expense": 45000,
+      "discount": 0,
+      "peopleCount": 4,
+      "receiptUrl": "https://...",
+      "isTransferred": true,
+      "transactionAt": "2024-04-06T12:30:00Z",
+      "transferredAt": "2024-04-06T18:00:00Z"
+    }
+  }
+  ```
+
+### ➕ 2.3 영수증 등록 (Admin)
 - **Endpoint**: `POST /api/receipts`
 - **Request Body**:
   ```json
@@ -201,10 +249,36 @@
     "income": 0,
     "expense": 20000,
     "discount": 10000,
+    "peopleCount": 1,
+    "receiptUrl": "https://...",
+    "isTransferred": false,
     "transactionAt": "2024-04-06T10:00:00Z",
-    "receiptUrl": "https://..."
+    "transferredAt": null
   }
   ```
+- **Response (201 Created)**: 등록된 객체 반환
+  ```json
+  {
+    "data": { "id": 2, ... },
+    "message": "영수증 내역이 성공적으로 등록되었습니다."
+  }
+  ```
+
+### 📝 2.4 영수증 수정 (Admin)
+- **Endpoint**: `PATCH /api/receipts/:id`
+- **Request Body**: 수정하고자 하는 필드만 전달 (Partial Update)
+  ```json
+  {
+    "expense": 25000,
+    "isTransferred": true,
+    "transferredAt": "2024-04-06T13:00:00Z"
+  }
+  ```
+- **Response (200 OK)**: 수정된 전체 객체 데이터 반환
+
+### ❌ 2.5 영수증 삭제 (Admin)
+- **Endpoint**: `DELETE /api/receipts/:id`
+- **Response (204 No Content)**: 본문 없음
 
 ---
 
@@ -321,3 +395,18 @@
 ### 📉 5.2 월별 지출 추이
 - **Endpoint**: `GET /api/stats/monthly-trend`
 - **Response**: `{ "data": [ { "month": "2024-04", "expense": 500000 }, ... ] }`
+
+### 💰 5.3 기간별 잔액 요약
+- **Endpoint**: `GET /api/stats/balance`
+- **Query Params**: `startDate`, `endDate` (생략 시 전체 기간)
+- **Response**:
+  ```json
+  {
+    "data": {
+      "totalIncome": 100000,
+      "totalExpense": 50000,
+      "totalDiscount": 10000,
+      "currentBalance": 60000
+    }
+  }
+  ```

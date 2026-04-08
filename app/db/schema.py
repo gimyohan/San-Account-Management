@@ -87,5 +87,6 @@ class Code(Base):
     code: Mapped[str] = mapped_column(String(32), nullable=False)
     type: Mapped[str] = mapped_column(String(32), nullable=False)
     memo: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    access_count: Mapped[int] = mapped_column(nullable=False, default=0)
     last_accessed_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
     
