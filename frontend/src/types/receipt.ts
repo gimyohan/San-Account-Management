@@ -1,7 +1,7 @@
 export interface ReceiptRead {
   id: number;
   category_id: number | null;
-  payer_id: number;
+  payer_id: number | null;
   description: string;
   income: number;
   expense: number;
@@ -15,7 +15,7 @@ export interface ReceiptRead {
 
 export interface ReceiptCreate {
   category_id: number | null;
-  payer_id: number;
+  payer_id: number | null;
   description: string;
   income?: number;
   expense?: number;

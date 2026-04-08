@@ -32,9 +32,9 @@ class ReceiptCreate(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def validate_income_expense(cls, data):
-        if data['income'] > 0 and data['expense'] > 0:
+        if data.get('income', 0) > 0 and data.get('expense', 0) > 0:
             raise ValueError('수입과 지출은 동시에 0보다 클 수 없습니다.')
-        if data['income'] == 0 and data['expense'] == 0:
+        if data.get('income', 0) == 0 and data.get('expense', 0) == 0:
             raise ValueError('수입과 지출은 동시에 0일 수 없습니다.')
         return data
 
