@@ -127,7 +127,13 @@ export default function CodeManagePage() {
                   <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-400 dark:text-slate-500">
                     <Clock size={12} />
                     {item.last_accessed_at ? (
-                      <span>마지막 접속: {formatDate(item.last_accessed_at)}</span>
+                      <>
+                        <span>마지막 접속: {formatDate(item.last_accessed_at)}</span>
+                        <span className="mx-1 opacity-50">&bull;</span>
+                        <span className="font-semibold text-blue-500">
+                          {item.access_count}회 접속
+                        </span>
+                      </>
                     ) : (
                       <span className="text-amber-500 dark:text-amber-400 font-medium">미사용</span>
                     )}
