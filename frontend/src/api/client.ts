@@ -25,6 +25,11 @@ apiClient.interceptors.response.use(
   (response) => response.data, // 바로 .data를 반환하여 호출 측에서 SuccessResponse를 받게 함
   (error) => {
     if (error.response) {
+      // 401 Unauthorized (토큰 만료 등) 인 경우 홈(로그인)으로 이동
+      // 단, /auth/me 요청 자체는 최초 인증 확인 단계이므로 루프를 막기 위해 제외
+      if (error.response.status === 401 && !error.config.url?.includes('/auth/me')) {
+        window.location.href = '/';
+      }
       // 백엔드에서 정의한 ErrorResponse 규격에 맞춰 에러를 던짐
       return Promise.reject(error.response.data as ErrorResponse);
     }

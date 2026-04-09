@@ -4,9 +4,9 @@ from starlette import status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from app.db.schema import Receipt, Category, Payer
+from app.db.schema import Receipt, Category, Payer, Quarter
 from app.models.receipt import ReceiptRead, ReceiptCreate
-from app.core.exception import NotFoundException
+from app.core.exception import NotFoundException, ConflictException
 
 from datetime import datetime
 
@@ -19,6 +19,7 @@ class ReceiptService:
             id=receipt.id,
             category_id=receipt.category_id,
             payer_id=receipt.payer_id,
+            quarter_id=receipt.quarter_id,
             description=receipt.description,
             income=receipt.income,
             expense=receipt.expense,
@@ -31,6 +32,8 @@ class ReceiptService:
         )
 
     def get_receipts(self, 
+        year_id: int | None = None,
+        quarter_id: int | None = None,
         start_date: datetime | None = None, 
         end_date: datetime | None = None, 
         category_id: int | None = None, 
@@ -38,6 +41,10 @@ class ReceiptService:
         is_transferred: bool | None = None
     ) -> list[ReceiptRead]:
         stmt = select(Receipt)
+        if year_id is not None:
+            stmt = stmt.where(Receipt.quarter.year_id == year_id)
+        if quarter_id is not None:
+            stmt = stmt.where(Receipt.quarter_id == quarter_id)
         if start_date is not None and end_date is not None:
             stmt = stmt.where(Receipt.transaction_at >= start_date, Receipt.transaction_at <= end_date)
         if category_id is not None:
@@ -57,50 +64,63 @@ class ReceiptService:
             raise NotFoundException("영수증을 찾을 수 없습니다.")
         return receipt
 
-    def create_receipt(self, receiptDTO: ReceiptCreate) -> ReceiptRead:
-        if receiptDTO.category_id is not None and self.db.scalar(select(Category).where(Category.id == receiptDTO.category_id)) is None:
+    def create_receipt(self, request: ReceiptCreate) -> ReceiptRead:
+        if request.category_id is not None and self.db.scalar(select(Category).where(Category.id == request.category_id)) is None:
             raise NotFoundException("카테고리를 찾을 수 없습니다.")
-        if receiptDTO.payer_id is not None and self.db.scalar(select(Payer).where(Payer.id == receiptDTO.payer_id)) is None:
+        if request.payer_id is not None and self.db.scalar(select(Payer).where(Payer.id == request.payer_id)) is None:
             raise NotFoundException("결제인을 찾을 수 없습니다.")
+        if request.quarter_id is not None and self.db.scalar(select(Quarter).where(Quarter.id == request.quarter_id)) is None:
+            raise NotFoundException("분기를 찾을 수 없습니다.")
+        if request.quarter_id is not None and request.category_id is not None and self.db.scalar(select(Category).where(Category.id == request.category_id)).year_id != self.db.scalar(select(Quarter).where(Quarter.id==request.quarter_id)).year_id:
+            raise ConflictException("카테고리와 분기의 연도가 일치하지 않습니다.")
 
         receipt = Receipt(
-            category_id=receiptDTO.category_id,
-            payer_id=receiptDTO.payer_id,
-            description=receiptDTO.description,
-            income=receiptDTO.income,
-            expense=receiptDTO.expense,
-            discount=receiptDTO.discount,
-            people_count=receiptDTO.people_count,
-            receipt_url=receiptDTO.receipt_url,
-            is_transferred=receiptDTO.is_transferred,
-            transaction_at=receiptDTO.transaction_at,
-            transferred_at=receiptDTO.transferred_at
+            category_id=request.category_id,
+            payer_id=request.payer_id,
+            quarter_id=request.quarter_id,
+            description=request.description,
+            income=request.income,
+            expense=request.expense,
+            discount=request.discount,
+            people_count=request.people_count,
+            receipt_url=request.receipt_url,
+            is_transferred=request.is_transferred,
+            transaction_at=request.transaction_at,
+            transferred_at=request.transferred_at
         )
         self.db.add(receipt)
         self.db.commit()
         self.db.refresh(receipt)
         return self._to_receipt_read(receipt)
         
-    def update_receipt(self, id: int, receiptDTO: ReceiptCreate) -> ReceiptRead:
+    def update_receipt(self, id: int, request: ReceiptCreate) -> ReceiptRead:
         receipt = self.get_receipt(id)
-        receipt.category_id = receiptDTO.category_id
-        receipt.payer_id = receiptDTO.payer_id
-        receipt.description = receiptDTO.description
-        receipt.income = receiptDTO.income
-        receipt.expense = receiptDTO.expense
-        receipt.discount = receiptDTO.discount
-        receipt.people_count = receiptDTO.people_count
-        receipt.receipt_url = receiptDTO.receipt_url
-        receipt.is_transferred = receiptDTO.is_transferred
-        receipt.transaction_at = receiptDTO.transaction_at
-        receipt.transferred_at = receiptDTO.transferred_at
+        if request.category_id is not None and self.db.scalar(select(Category).where(Category.id == request.category_id)) is None:
+            raise NotFoundException("카테고리를 찾을 수 없습니다.")
+        if request.payer_id is not None and self.db.scalar(select(Payer).where(Payer.id == request.payer_id)) is None:
+            raise NotFoundException("결제인을 찾을 수 없습니다.")
+        if request.quarter_id is not None and self.db.scalar(select(Quarter).where(Quarter.id == request.quarter_id)) is None:
+            raise NotFoundException("분기를 찾을 수 없습니다.")
+        if request.quarter_id is not None and request.category_id is not None and self.db.scalar(select(Category).where(Category.id == request.category_id)).year_id != self.db.scalar(select(Quarter).where(Quarter.id==request.quarter_id)).year_id:
+            raise ConflictException("카테고리와 분기의 연도가 일치하지 않습니다.")
+        receipt.category_id = request.category_id
+        receipt.payer_id = request.payer_id
+        receipt.quarter_id = request.quarter_id
+        receipt.description = request.description
+        receipt.income = request.income
+        receipt.expense = request.expense
+        receipt.discount = request.discount
+        receipt.people_count = request.people_count
+        receipt.receipt_url = request.receipt_url
+        receipt.is_transferred = request.is_transferred
+        receipt.transaction_at = request.transaction_at
+        receipt.transferred_at = request.transferred_at
         self.db.commit()
         self.db.refresh(receipt)
         return self._to_receipt_read(receipt)
 
     def delete_receipt(self, id: int):
-        stmt = select(Receipt).where(Receipt.id == id)
-        receipt = self.db.scalars(stmt).first()
+        receipt = self.db.scalar(select(Receipt).where(Receipt.id == id))
         if not receipt:
             raise NotFoundException("영수증을 찾을 수 없습니다.")
         self.db.delete(receipt)

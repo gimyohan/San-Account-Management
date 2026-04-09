@@ -1,11 +1,9 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from fastapi import HTTPException
-from starlette import status
 
 from app.db.schema import Code
 from app.models.auth import CodeRead
-from app.core.exception import NotFoundException, ConflictException, ForbiddenException
+from app.core.exception import NotFoundException, ConflictException, UnprocessableEntityException
 from app.core.config import config
 
 from datetime import datetime, timedelta
@@ -17,61 +15,59 @@ class AuthService:
         self.db = session
         self.code_domain = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     
-    def create_access_token(self, type: str, code: str) -> str:
-        user = self.db.scalar(select(Code).where(Code.type == type, Code.code == code))
-        if not user:
-            raise ForbiddenException("유효하지 않은 코드입니다. 다시 확인해주세요.", "INVALID_CODE")
-        user.last_accessed_at = datetime.utcnow()
+    def create_access_token(self, role: str, code: str) -> str:
+        code = self.db.scalar(select(Code).where(Code.role == role, Code.code == code))
+        if not code:
+            raise NotFoundException("유효하지 않은 코드입니다. 다시 확인해주세요.", "NOT_FOUND")
+        code.last_accessed_at = datetime.utcnow()
+        code.access_count += 1
         self.db.commit()
-        self.db.refresh(user)
+        self.db.refresh(code)
         to_encode = {
-            "sub": str(user.id),
-            "role": user.type,
+            "sub": str(code.id),
+            "role": code.role,
             "iat": datetime.utcnow(),
             "exp": datetime.utcnow() + timedelta(minutes = config.jwt_access_token_expire_minutes)
         }
-        user.access_count += 1
-        self.db.commit()
-        self.db.refresh(user)
         access_token = jwt.encode(to_encode, config.jwt_secret_key, algorithm=config.jwt_algorithm)
         return access_token
         
     def get_codes(self, limit: int) -> list[CodeRead]:
         if limit < 0:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="limit은 0 이상의 길이어야 합니다.")
+            raise UnprocessableEntityException("limit은 0 이상의 길이어야 합니다.", "INVALID_LIMIT")
         codes = self.db.scalars(
             select(Code)
-            .where(Code.type == "general")
+            .where(Code.role == "general")
             .order_by(Code.last_accessed_at.desc().nulls_last())
             .limit(limit)
         ).all()
-        return [CodeRead(id=code.id, code=code.code, memo=code.memo, access_count=code.access_count, last_accessed_at=code.last_accessed_at) for code in codes]
+        return codes
 
     def create_code(self) -> CodeRead:
-        code = Code(type="general", code="".join(choice(self.code_domain) for _ in range(6)))
+        code = Code(role="general", code="".join(choice(self.code_domain) for _ in range(6)))
         self.db.add(code)
         self.db.commit()
         self.db.refresh(code)
-        return CodeRead(id=code.id, code=code.code, memo=code.memo, access_count=code.access_count, last_accessed_at=code.last_accessed_at)
-
-    def delete_code(self, id):
-        code = self.db.scalar(select(Code).where(Code.id == id))
-        if not code:
-            raise ForbiddenException("유효하지 않은 코드입니다. 다시 확인해주세요.", "INVALID_CODE")
-        if code.type == "admin":
-            raise ConflictException("관리자 코드는 삭제할 수 없습니다.", "CANNOT_DELETE_ADMIN")
-        self.db.delete(code)
-        self.db.commit()
-        return
+        return code
 
     def update_code_memo(self, id: int, memo: str | None) -> CodeRead:
         code = self.db.scalar(select(Code).where(Code.id == id))
         if not code:
-            raise ForbiddenException("유효하지 않은 코드입니다. 다시 확인해주세요.", "INVALID_CODE")
-        if code.type == "admin":
+            raise NotFoundException("존재하지 않는 코드입니다.", "NOT_FOUND")
+        if code.role == "admin":
             raise ConflictException("관리자 코드는 수정할 수 없습니다.", "CANNOT_UPDATE_ADMIN")
         
         code.memo = memo
         self.db.commit()
         self.db.refresh(code)
-        return CodeRead(id=code.id, code=code.code, memo=code.memo, access_count=code.access_count, last_accessed_at=code.last_accessed_at)
+        return code
+
+    def delete_code(self, id):
+        code = self.db.scalar(select(Code).where(Code.id == id))
+        if not code:
+            raise NotFoundException("존재하지 않는 코드입니다.", "NOT_FOUND")
+        if code.role == "admin":
+            raise ConflictException("관리자 코드는 삭제할 수 없습니다.", "CANNOT_DELETE_ADMIN")
+        self.db.delete(code)
+        self.db.commit()
+        return

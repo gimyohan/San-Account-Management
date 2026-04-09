@@ -1,8 +1,16 @@
 import apiClient from './client';
 import type { SuccessResponse } from './client';
-import type { BalanceResponse } from '../types/stats';
+import type { BalanceStats } from '../types/stats';
 
 export const statsService = {
-  getBalance: (params?: { start_date?: string; end_date?: string }) => 
-    apiClient.get<never, BalanceResponse>('/stats/balance', { params })
+  /**
+   * Get financial balance summary.
+   * Trailing slash removed to match backend.
+   */
+  getBalance: (params: { 
+    quarter_id?: number; 
+    year_id?: number; 
+    start_date?: string; 
+    end_date?: string; 
+  }) => apiClient.get<never, SuccessResponse<BalanceStats>>('/stats/balance', { params }),
 };

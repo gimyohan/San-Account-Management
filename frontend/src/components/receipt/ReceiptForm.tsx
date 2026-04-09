@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Edit2, TrendingUp, TrendingDown } from 'lucide-react';
-import type { ReceiptCreate, ReceiptRead } from '../../types/receipt';
+import type { ReceiptCreate, Receipt } from '../../types/receipt';
 import type { CategoryTree } from '../../types/category';
 import type { PayerRead } from '../../types/payer';
 
 interface ReceiptFormProps {
-  initData?: ReceiptRead;
+  quarter_id: number;
+  initData?: Receipt;
   isCreating: boolean;
   categories: CategoryTree[];
   payers: PayerRead[];
@@ -28,23 +29,24 @@ const flattenCategories = (tree: CategoryTree[], prefix = ''): { id: number; nam
   return result;
 };
 
-export function ReceiptForm({ initData, isCreating, categories: categoryTree, payers, isLoading, onCancel, onSubmit }: ReceiptFormProps) {
+export function ReceiptForm({ quarter_id, initData, isCreating, categories: categoryTree, payers, isLoading, onCancel, onSubmit }: ReceiptFormProps) {
   const categories = useMemo(() => flattenCategories(categoryTree), [categoryTree]);
 
   const [type, setType] = useState<'expense' | 'income'>('expense');
 
   const initForm = (): ReceiptCreate => ({
-    category_id: null,
+    quarter_id,
+    category_id: null as any,
     payer_id: payers?.[0]?.id || null,
     description: '',
     income: 0,
     expense: 0,
     discount: 0,
     people_count: 1,
-    receipt_url: '',
+    receipt_url: null,
     is_transferred: false,
     transaction_at: new Date().toISOString().slice(0, 16),
-    transferred_at: null
+    transferred_at: null,
   });
 
   const [formData, setFormData] = useState<ReceiptCreate>(initForm());
@@ -53,6 +55,7 @@ export function ReceiptForm({ initData, isCreating, categories: categoryTree, pa
     if (initData) {
       setType(initData.income > 0 ? 'income' : 'expense');
       setFormData({
+        quarter_id,
         category_id: initData.category_id,
         payer_id: initData.payer_id,
         description: initData.description,
@@ -63,47 +66,50 @@ export function ReceiptForm({ initData, isCreating, categories: categoryTree, pa
         receipt_url: initData.receipt_url,
         is_transferred: initData.is_transferred,
         transaction_at: initData.transaction_at.slice(0, 16),
-        transferred_at: initData.transferred_at ? initData.transferred_at.slice(0, 16) : null
+        transferred_at: initData.transferred_at,
       });
     } else {
       setType('expense');
       setFormData(initForm());
     }
-  }, [initData, payers]); // initData and payers reference change
+  }, [initData, payers, quarter_id]);
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.description) return;
-    if (type === 'expense' && !formData.payer_id) return;
+
+    const common = {
+      ...formData,
+      quarter_id,
+      transaction_at: new Date(formData.transaction_at).toISOString(),
+    };
 
     if (type === 'income') {
       onSubmit({
-        ...formData,
-        income: formData.income,
+        ...common,
+        income: Number(formData.income) || 0,
         expense: 0,
         discount: 0,
         payer_id: null,
-        people_count: 1,
         is_transferred: true,
-        transferred_at: new Date().toISOString().slice(0, 16),
-        receipt_url: formData.receipt_url?.trim() || null
       });
     } else {
       onSubmit({
-        ...formData,
+        ...common,
         income: 0,
-        expense: formData.expense,
-        discount: formData.discount,
+        expense: Number(formData.expense) || 0,
+        discount: Number(formData.discount) || 0,
         payer_id: formData.payer_id,
-        people_count: formData.people_count,
         is_transferred: formData.is_transferred,
-        transferred_at: formData.is_transferred && formData.transferred_at ? formData.transferred_at : null,
-        receipt_url: formData.receipt_url?.trim() || null
       });
     }
   };
 
-  const isSubmitDisabled = isLoading || !formData.description || (type === 'expense' && !formData.payer_id);
+  const amountValue = type === 'income' ? Number(formData.income) : Number(formData.expense);
+  const isSubmitDisabled = isLoading || 
+    !formData.description || 
+    (type === 'expense' && (!formData.payer_id || !formData.category_id)) || 
+    (amountValue <= 0);
 
   return (
     <div className="p-6 bg-gradient-to-br from-primary/10 to-transparent dark:from-primary/5 dark:to-slate-900 ring-1 ring-primary/20 rounded-2xl shadow-lg relative animate-in fade-in zoom-in-95 duration-200">
@@ -152,9 +158,10 @@ export function ReceiptForm({ initData, isCreating, categories: categoryTree, pa
               <input 
                 type="number" 
                 min="0" 
-                value={formData.income} 
+                value={formData.income || ''} 
                 onChange={e => setFormData({...formData, income: Number(e.target.value)})} 
-                className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                placeholder="0"
+                className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary font-mono" 
               />
             </div>
             <div className="space-y-1.5">
@@ -170,13 +177,12 @@ export function ReceiptForm({ initData, isCreating, categories: categoryTree, pa
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Row 1: Category & Description */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-500 ml-1">카테고리</label>
                 <select
                   value={formData.category_id || ''}
-                  onChange={(e) => setFormData({...formData, category_id: e.target.value ? Number(e.target.value) : null})}
+                  onChange={(e) => setFormData({...formData, category_id: e.target.value ? Number(e.target.value) : null as any})}
                   className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary"
                 >
                   <option value="">(미분류)</option>
@@ -196,7 +202,6 @@ export function ReceiptForm({ initData, isCreating, categories: categoryTree, pa
               </div>
             </div>
 
-            {/* Row 2: Date & Payer */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-500 ml-1">거래 일시</label>
@@ -222,16 +227,16 @@ export function ReceiptForm({ initData, isCreating, categories: categoryTree, pa
               </div>
             </div>
 
-            {/* Row 3: Expense Specifics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-500 ml-1">지출액</label>
                 <input 
                   type="number" 
                   min="0" 
-                  value={formData.expense} 
+                  value={formData.expense || ''} 
                   onChange={e => setFormData({...formData, expense: Number(e.target.value)})} 
-                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                  placeholder="0"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary font-mono" 
                 />
               </div>
               <div className="space-y-1.5">
@@ -240,61 +245,22 @@ export function ReceiptForm({ initData, isCreating, categories: categoryTree, pa
                   type="number" 
                   min="0" 
                   max={formData.expense}
-                  value={formData.discount} 
+                  value={formData.discount || ''} 
                   onChange={e => setFormData({...formData, discount: Number(e.target.value)})} 
-                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                  placeholder="0"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary font-mono" 
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-500 ml-1">인원</label>
-                <input 
-                  type="number" 
-                  min="1" 
-                  value={formData.people_count} 
-                  onChange={e => setFormData({...formData, people_count: Number(e.target.value)})} 
-                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
-                />
-              </div>
-            </div>
-
-            {/* Row 4: URL & Transfer Status */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-2 cursor-pointer pb-1 text-xs font-semibold text-slate-500 ml-1">
+              <div className="space-y-1.5 p-1">
+                <label className="flex items-center gap-2 cursor-pointer pt-6 text-sm font-semibold text-slate-600 dark:text-slate-400">
                   <input
                     type="checkbox"
                     checked={formData.is_transferred}
-                    onChange={e => {
-                      const checked = e.target.checked;
-                      setFormData({...formData, is_transferred: checked, transferred_at: checked ? new Date().toISOString().slice(0, 16) : null});
-                    }}
-                    className="w-3.5 h-3.5 rounded text-primary focus:ring-primary border-slate-300 pointer"
+                    onChange={e => setFormData({...formData, is_transferred: e.target.checked})}
+                    className="w-4 h-4 rounded text-primary focus:ring-primary border-slate-300 pointer"
                   />
-                  <span className="text-slate-700 dark:text-slate-300">정산 완료 여부</span>
+                  <span>정산 완료</span>
                 </label>
-                {formData.is_transferred ? (
-                  <input
-                    type="datetime-local"
-                    value={formData.transferred_at || ''}
-                    onChange={(e) => setFormData({...formData, transferred_at: e.target.value})}
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary"
-                    required
-                  />
-                ) : (
-                  <div className="w-full h-[42px] bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center px-3 text-sm text-slate-400 select-none">
-                    정산되지 않음
-                  </div>
-                )}
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-500 ml-1">URL 링크</label>
-                <input
-                  type="text"
-                  value={formData.receipt_url || ''}
-                  onChange={(e) => setFormData({...formData, receipt_url: e.target.value})}
-                  placeholder="https://..."
-                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary"
-                />
               </div>
             </div>
           </div>

@@ -3,8 +3,6 @@ from pydantic import BaseModel, field_validator, model_validator
 
 class ReceiptRead(BaseModel):
     id: int
-    category_id: int | None
-    payer_id: int | None
     description: str
     income: int = 0
     expense: int = 0
@@ -14,10 +12,11 @@ class ReceiptRead(BaseModel):
     is_transferred: bool = False
     transaction_at: datetime
     transferred_at: datetime | None
+    category_id: int | None = None
+    payer_id: int | None = None
+    quarter_id: int
 
 class ReceiptCreate(BaseModel):
-    category_id: int | None
-    payer_id: int | None
     description: str
     income: int = 0
     expense: int = 0
@@ -27,16 +26,9 @@ class ReceiptCreate(BaseModel):
     is_transferred: bool = False
     transaction_at: datetime
     transferred_at: datetime | None
-
-
-    @model_validator(mode="before")
-    @classmethod
-    def validate_income_expense(cls, data):
-        if data.get('income', 0) > 0 and data.get('expense', 0) > 0:
-            raise ValueError('수입과 지출은 동시에 0보다 클 수 없습니다.')
-        if data.get('income', 0) == 0 and data.get('expense', 0) == 0:
-            raise ValueError('수입과 지출은 동시에 0일 수 없습니다.')
-        return data
+    category_id: int | None = None
+    payer_id: int | None = None
+    quarter_id: int
 
 
 
@@ -55,6 +47,13 @@ class ReceiptCreate(BaseModel):
         return v
 
 
+    @model_validator(mode="after")
+    def validate_income_expense(self):
+        if self.income > 0 and self.expense > 0:
+            raise ValueError('수입과 지출은 동시에 0보다 클 수 없습니다.')
+        if self.income == 0 and self.expense == 0:
+            raise ValueError('수입과 지출은 동시에 0일 수 없습니다.')
+        return self
 
     @model_validator(mode="after")
     def validate_expense(self):

@@ -4,21 +4,25 @@ import { useState, useCallback } from 'react';
 import type { CategoryTree } from '../types/category';
 import { CategoryTreeView } from '../components/category/CategoryTreeView';
 import { CategoryDetailPanel } from '../components/category/CategoryDetailPanel';
+import { useSelection } from '../contexts/SelectionContext';
 
 export default function CategoryPage() {
   const queryClient = useQueryClient();
+  const { selectedYear } = useSelection();
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
   const [draggedId, setDraggedId] = useState<number | null>(null);
 
   const { data: treeData, isLoading } = useQuery({
-    queryKey: ['categories'],
-    queryFn: categoryService.getTree,
-    select: (res) => res.data, // SuccessResponse에서 data 추출
+    queryKey: ['categories', selectedYear?.id],
+    queryFn: () => categoryService.getByYear(selectedYear!.id),
+    enabled: !!selectedYear,
+    select: (res) => res.data,
   });
 
   const invalidate = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['categories'] });
-  }, [queryClient]);
+    queryClient.invalidateQueries({ queryKey: ['categories', selectedYear?.id] });
+    queryClient.invalidateQueries({ queryKey: ['stats'] });
+  }, [queryClient, selectedYear?.id]);
 
   // 트리를 순회하여 특정 ID의 노드를 찾는 헬퍼
   const findNode = useCallback((nodes: CategoryTree[], id: number): CategoryTree | null => {
@@ -44,26 +48,53 @@ export default function CategoryPage() {
     return 0;
   }, []);
 
-  // Move mutation (드래그 앤 드롭)
+  // Move mutation (부모 변경)
   const moveMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { name: string; parent_id: number | null } }) =>
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
       categoryService.update(id, data),
     onSuccess: () => invalidate(),
     onError: (err: any) => alert(err.detail || '이동 중 오류가 발생했습니다.')
   });
 
-  const handleMove = useCallback((dragId: number, dropParentId: number | null) => {
-    if (!treeData) return;
+  // Reorder mutation (동일 부모 내 순서 변경)
+  const reorderMutation = useMutation({
+    mutationFn: ({ id, order }: { id: number; order: number }) =>
+      categoryService.reorder(id, order),
+    onSuccess: () => invalidate(),
+    onError: (err: any) => alert(err.detail || '순서 변경 중 오류가 발생했습니다.')
+  });
+
+  const handleMove = useCallback((dragId: number, dropParentId: number | null, newOrder?: number) => {
+    if (!treeData || !selectedYear) return;
     const draggedNode = findNode(treeData, dragId);
     if (!draggedNode) return;
-    if (draggedNode.parent_id === dropParentId) return;
+    
+    // 자기 자신에게 드랍하거나, 변경사항이 없는 경우 무시
     if (dragId === dropParentId) return;
 
-    moveMutation.mutate({
-      id: dragId,
-      data: { name: draggedNode.name, parent_id: dropParentId }
-    });
-  }, [treeData, findNode, moveMutation]);
+    // 만약 부모가 동일하고 newOrder가 지정되었다면 -> Reorder API 호출
+    if (draggedNode.parent_id === dropParentId && newOrder !== undefined) {
+      // 제자리 드랍 방지 (현재 순서와 동일한 경우)
+      if (draggedNode.sibling_order === newOrder) return;
+      
+      reorderMutation.mutate({ id: dragId, order: newOrder });
+      return;
+    }
+
+    // 부모를 변경하는 경우 -> Update API 호출
+    if (draggedNode.parent_id !== dropParentId) {
+      moveMutation.mutate({
+        id: dragId,
+        data: { 
+          name: draggedNode.name, 
+          amount: draggedNode.amount,
+          year_id: selectedYear.id,
+          sibling_order: newOrder !== undefined ? newOrder : 0, 
+          parent_id: dropParentId 
+        }
+      });
+    }
+  }, [treeData, findNode, moveMutation, reorderMutation, selectedYear]);
 
   const activeNode = activeCategoryId && treeData
     ? findNode(treeData, activeCategoryId)
@@ -73,9 +104,15 @@ export default function CategoryPage() {
     ? getDepth(treeData, activeCategoryId)
     : 0;
 
+  if (!selectedYear) return (
+    <div className="flex flex-col items-center justify-center h-full text-slate-400">
+      <p className="text-lg font-medium">관리할 연도를 먼저 선택해주세요.</p>
+    </div>
+  );
+
   if (isLoading) return (
     <div className="flex items-center justify-center h-full">
-      <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
     </div>
   );
 

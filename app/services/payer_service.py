@@ -11,9 +11,8 @@ class PayerService:
         self.db = session
 
     def get_payers(self) -> list[PayerRead]:
-        stmt = select(Payer)
-        payers = self.db.execute(stmt).scalars().all()
-        return [PayerRead(id=payer.id, name=payer.name, account=payer.account) for payer in payers]
+        payers = self.db.scalars(select(Payer)).all()
+        return payers
 
     def create_payer(self, name: str, account: str | None) -> PayerRead:
         payer = Payer(name=name)

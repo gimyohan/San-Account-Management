@@ -15,8 +15,10 @@ router = APIRouter(prefix="/receipts", tags=["receipts"])
 def get_receipt_service(db=Depends(get_db)) -> ReceiptService:
     return ReceiptService(db)
 
-@router.get("/", status_code=status.HTTP_200_OK, response_model=SuccessResponse[list[ReceiptRead]])
+@router.get("", status_code=status.HTTP_200_OK, response_model=SuccessResponse[list[ReceiptRead]])
 def get_receipts(
+    year_id: int | None = None,
+    quarter_id: int | None = None,
     start_date: datetime | None = None, 
     end_date: datetime | None = None,
     category_id: int | None = None, 
@@ -27,7 +29,7 @@ def get_receipts(
 
     if user != "admin":
         raise ForbiddenException("관리자만 접근할 수 있습니다.")
-    return SuccessResponse(data=service.get_receipts(start_date, end_date, category_id, payer_id, is_transferred))
+    return SuccessResponse(data=service.get_receipts(year_id, quarter_id, start_date, end_date, category_id, payer_id, is_transferred))
 
 @router.get("/{id}", status_code=status.HTTP_200_OK, response_model=SuccessResponse[ReceiptRead])
 def get_receipt(id: int, service: ReceiptService = Depends(get_receipt_service), user=Depends(get_current_user)) -> SuccessResponse[ReceiptRead]:
@@ -35,7 +37,7 @@ def get_receipt(id: int, service: ReceiptService = Depends(get_receipt_service),
         raise ForbiddenException("관리자만 접근할 수 있습니다.")
     return SuccessResponse(data=service.get_receipt(id))
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=SuccessResponse[ReceiptRead])
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=SuccessResponse[ReceiptRead])
 def create_receipt(receipt: ReceiptCreate, service: ReceiptService = Depends(get_receipt_service), user=Depends(get_current_user)) -> SuccessResponse[ReceiptRead]:
     if user != "admin":
         raise ForbiddenException("관리자만 접근할 수 있습니다.")

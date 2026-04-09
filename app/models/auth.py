@@ -1,15 +1,16 @@
 from pydantic import BaseModel
 from datetime import datetime
 
-class Role(BaseModel):
+class RoleRead(BaseModel):
     role: str
 
 class CodeRead(BaseModel):
     id: int
     code: str
-    memo: str | None = None
+    role: str
+    memo: str
     access_count: int
     last_accessed_at: datetime | None = None
 
 class CodeUpdate(BaseModel):
-    memo: str | None = None
+    memo: str

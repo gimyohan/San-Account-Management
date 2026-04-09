@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Sidebar } from './components/layout/Sidebar';
 import CategoryPage from './pages/CategoryPage';
 import CodeManagePage from './pages/CodeManagePage';
@@ -8,18 +9,30 @@ import DashboardPage from './pages/DashboardPage';
 import BudgetManagePage from './pages/BudgetManagePage';
 import LoginPage from './pages/LoginPage';
 import { authService } from './api/authService';
+import { SelectionProvider } from './contexts/SelectionContext';
 
 function App() {
-  const [role, setRole] = useState<string | null>(null);
-  const [checking, setChecking] = useState(true);
+  const queryClient = useQueryClient();
   const [activePage, setActivePage] = useState('dashboard');
 
-  useEffect(() => {
-    authService.me()
-      .then((res) => setRole(res.data.role))
-      .catch(() => setRole(null))
-      .finally(() => setChecking(false));
-  }, []);
+  const { data: userData, isLoading: checking } = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: authService.me,
+    retry: false,
+    staleTime: 1000 * 60 * 5, // Cache for 5 mins
+  });
+
+  const role = userData?.data?.role || null;
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } finally {
+      queryClient.setQueryData(['auth', 'me'], null);
+      queryClient.clear();
+      window.location.href = '/';
+    }
+  };
 
   if (checking) {
     return (
@@ -30,7 +43,7 @@ function App() {
   }
 
   if (!role) {
-    return <LoginPage onLoginSuccess={(r) => setRole(r)} />;
+    return <LoginPage onLoginSuccess={() => queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })} />;
   }
 
   const renderPage = () => {
@@ -50,23 +63,25 @@ function App() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground transition-colors duration-300">
-      <Sidebar
-        activePage={activePage}
-        onNavigate={setActivePage}
-        onLogout={() => authService.logout().finally(() => setRole(null))}
-      />
-      <main className="flex-1 overflow-hidden relative">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
-        <header className="h-16 glass border-b border-white/10 dark:border-slate-800/50 flex items-center px-10 relative z-10">
-          <h2 className="text-xl font-semibold bg-gradient-to-r from-slate-800 to-slate-500 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">SAM Account Manager</h2>
-        </header>
-        <div className="p-10 h-[calc(100vh-4rem)] overflow-y-auto relative z-10">
-          {renderPage()}
-        </div>
-      </main>
-    </div>
+    <SelectionProvider>
+          <div className="flex min-h-screen bg-background text-foreground transition-colors duration-300">
+            <Sidebar
+              activePage={activePage}
+              onNavigate={setActivePage}
+              onLogout={handleLogout}
+            />
+            <main className="flex-1 overflow-hidden relative">
+              <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[120px] pointer-events-none" />
+              <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
+              <header className="h-16 glass border-b border-white/10 dark:border-slate-800/50 flex items-center px-10 relative z-10">
+                <h2 className="text-xl font-semibold bg-gradient-to-r from-slate-800 to-slate-500 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">SAM Account Manager</h2>
+              </header>
+              <div className="p-10 h-[calc(100vh-4rem)] overflow-y-auto relative z-10">
+                {renderPage()}
+              </div>
+            </main>
+          </div>
+    </SelectionProvider>
   );
 }
 
