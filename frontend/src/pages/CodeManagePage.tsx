@@ -69,8 +69,27 @@ export default function CodeManagePage() {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return null;
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    try {
+      // 1. 서버에서 온 UTC 날짜에 'Z'가 없으면 붙여서 확실한 UTC임을 명시
+      // 이렇게 해야 new Date()가 이를 로컬 시간으로 오해하지 않고 UTC 기준값으로 인식합니다.
+      const utcDateStr = (dateStr.endsWith('Z') || dateStr.includes('+')) 
+        ? dateStr 
+        : `${dateStr.replace(' ', 'T')}Z`; // 빈칸을 T로 바꾸고 Z를 붙여 ISO 8601 완성
+      
+      const d = new Date(utcDateStr);
+      
+      // 2. 브라우저 로컬 환경(KST)으로 변환하여 표시
+      return d.toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+    } catch (e) {
+      return dateStr;
+    }
   };
 
   const hasMore = response ? response.codes.length < response.total : false;
