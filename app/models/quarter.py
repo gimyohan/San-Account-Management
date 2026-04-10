@@ -13,4 +13,4 @@ class QuarterCreate(BaseModel):
 
 class QuarterUpdate(BaseModel):
     order: int
-    name: str
+    name: str | None = None
