@@ -6,6 +6,14 @@ SAM은 복잡한 회계 데이터를 효율적으로 관리하고, 직관적인 
 
 ---
 
+## 📸 미리보기 (Preview)
+
+| 대시보드 (Dashboard) | 예산 관리 (Budget) | 액세스 코드 (Access Code) |
+| :---: | :---: | :---: |
+| ![Dashboard](./docs/dashboard.png) | ![Budget](./docs/budget.png) | ![Code](./docs/code.png) |
+
+---
+
 ## ✨ 핵심 기능 (Key Features)
 
 ### 🛠️ 관리자 모드 (Admin)
