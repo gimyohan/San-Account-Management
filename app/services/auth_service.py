@@ -75,7 +75,8 @@ class AuthService:
         code.memo = request.memo
         self.db.commit()
         self.db.refresh(code)
-        res = model.CodePrevMemoRead.model_validate(code, prev_memo=prev_memo)
+        res = model.CodePrevMemoRead.model_validate(code)
+        res.prev_memo = prev_memo
         return res
 
     def delete_code(self, id):

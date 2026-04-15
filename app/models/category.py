@@ -1,6 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 class CategoryRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
     level: int
@@ -10,6 +11,7 @@ class CategoryRead(BaseModel):
     year_id: int
 
 class CategoryTreeRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
     level: int

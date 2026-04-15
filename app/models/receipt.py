@@ -1,7 +1,8 @@
 from datetime import datetime
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, field_validator, model_validator, ConfigDict
 
 class ReceiptRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     description: str
     income: int = 0
