@@ -38,7 +38,7 @@ export default function ReceiptManagePage() {
   // Data Fetching
   const { data: receipts, isLoading: isReceiptsLoading } = useQuery({ 
     queryKey: ['receipts', selectedQuarter?.id], 
-    queryFn: () => receiptService.getByQuarter(selectedQuarter!.id), 
+    queryFn: () => receiptService.list({ quarter_id: selectedQuarter!.id }), 
     enabled: !!selectedQuarter,
     select: res => res.data 
   });

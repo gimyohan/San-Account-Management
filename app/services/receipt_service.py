@@ -42,7 +42,7 @@ class ReceiptService:
     ) -> list[ReceiptRead]:
         stmt = select(Receipt)
         if year_id is not None:
-            stmt = stmt.where(Receipt.quarter.year_id == year_id)
+            stmt = stmt.join(Receipt.quarter).where(Quarter.year_id == year_id)
         if quarter_id is not None:
             stmt = stmt.where(Receipt.quarter_id == quarter_id)
         if start_date is not None and end_date is not None:
